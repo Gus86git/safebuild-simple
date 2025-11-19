@@ -1,8 +1,4 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
-from PIL import Image, ImageDraw, ImageFont
-import io
 import base64
 from datetime import datetime
 import time
@@ -74,19 +70,16 @@ st.markdown("""
         padding: 0.5rem 1rem;
         border-radius: 0.5rem;
     }
-    .detection-box {
-        border: 3px solid;
-        position: absolute;
-        background-color: transparent;
+    .scenario-image {
+        border-radius: 10px;
+        border: 3px solid #E2E8F0;
+        margin: 1rem 0;
     }
-    .person-box { border-color: #00FF00; }
-    .helmet-box { border-color: #0000FF; }
-    .vest-box { border-color: #FF0000; }
 </style>
 """, unsafe_allow_html=True)
 
 # =============================================
-# SISTEMA EXPERTO (INTEGRADO EN EL MISMO ARCHIVO)
+# SISTEMA EXPERTO
 # =============================================
 class SafetyExpertSystem:
     def __init__(self):
@@ -157,58 +150,86 @@ class SafetyExpertSystem:
         }
 
 # =============================================
-# FUNCIONES DE VISUALIZACIÓN CON PIL
+# IMÁGENES BASE64 INTEGRADAS
 # =============================================
-def create_demo_image(scenario_type, width=600, height=400):
-    """Crear imagen de demo con PIL (sin OpenCV)"""
-    # Crear imagen base (fondo de obra)
-    img = Image.new('RGB', (width, height), color=(200, 200, 200))
-    draw = ImageDraw.Draw(img)
-    
-    # Dibujar elementos de construcción
-    draw.rectangle([50, 200, 550, 250], fill=(139, 69, 19), outline=(0,0,0), width=2)  # tierra
-    draw.rectangle([100, 150, 200, 200], fill=(210, 180, 140), outline=(0,0,0), width=2)  # ladrillo
-    draw.rectangle([300, 100, 400, 200], fill=(192, 192, 192), outline=(0,0,0), width=2)  # estructura
-    
-    # Añadir texto de fondo
-    try:
-        font = ImageFont.load_default()
-        draw.text((10, 10), "SafeBuild - Obra en Progreso", fill=(0,0,0), font=font)
-    except:
-        draw.text((10, 10), "SafeBuild - Obra en Progreso", fill=(0,0,0))
-    
-    return img, draw
+def get_base64_image(scenario):
+    """Imágenes SVG simples integradas en el código"""
+    if scenario == "seguro":
+        return """
+        <svg width="600" height="400" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100%" height="100%" fill="#e0e0e0"/>
+            <rect x="50" y="250" width="500" height="100" fill="#8B4513"/>
+            <rect x="100" y="150" width="100" height="100" fill="#CD853F"/>
+            <rect x="300" y="100" width="100" height="150" fill="#A9A9A9"/>
+            
+            <!-- Trabajador 1 con EPP completo -->
+            <circle cx="150" cy="120" r="25" fill="#00FF00"/>
+            <rect x="125" y="145" width="50" height="80" fill="#00FF00"/>
+            <circle cx="150" cy="100" r="15" fill="#0000FF"/>
+            <rect x="140" y="160" width="20" height="40" fill="#FF0000"/>
+            
+            <!-- Trabajador 2 con EPP completo -->
+            <circle cx="350" cy="170" r="25" fill="#00FF00"/>
+            <rect x="325" y="195" width="50" height="80" fill="#00FF00"/>
+            <circle cx="350" cy="150" r="15" fill="#0000FF"/>
+            <rect x="340" y="210" width="20" height="40" fill="#FF0000"/>
+            
+            <text x="10" y="30" font-family="Arial" font-size="20" fill="black">✅ Escenario Seguro - EPP Completo</text>
+        </svg>
+        """
+    elif scenario == "alerta":
+        return """
+        <svg width="600" height="400" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100%" height="100%" fill="#e0e0e0"/>
+            <rect x="50" y="250" width="500" height="100" fill="#8B4513"/>
+            <rect x="100" y="150" width="100" height="100" fill="#CD853F"/>
+            <rect x="300" y="100" width="100" height="150" fill="#A9A9A9"/>
+            
+            <!-- Trabajador 1 con casco pero sin chaleco -->
+            <circle cx="150" cy="120" r="25" fill="#00FF00"/>
+            <rect x="125" y="145" width="50" height="80" fill="#00FF00"/>
+            <circle cx="150" cy="100" r="15" fill="#0000FF"/>
+            <!-- Sin chaleco -->
+            
+            <!-- Trabajador 2 con chaleco pero sin casco -->
+            <circle cx="350" cy="170" r="25" fill="#00FF00"/>
+            <rect x="325" y="195" width="50" height="80" fill="#00FF00"/>
+            <!-- Sin casco -->
+            <rect x="340" y="210" width="20" height="40" fill="#FF0000"/>
+            
+            <text x="10" y="30" font-family="Arial" font-size="20" fill="black">⚠️ Escenario con Alertas - EPP Incompleto</text>
+        </svg>
+        """
+    else:  # critico
+        return """
+        <svg width="600" height="400" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100%" height="100%" fill="#e0e0e0"/>
+            <rect x="50" y="250" width="500" height="100" fill="#8B4513"/>
+            <rect x="100" y="150" width="100" height="100" fill="#CD853F"/>
+            <rect x="300" y="100" width="100" height="150" fill="#A9A9A9"/>
+            
+            <!-- Trabajador 1 sin EPP -->
+            <circle cx="150" cy="120" r="25" fill="#00FF00"/>
+            <rect x="125" y="145" width="50" height="80" fill="#00FF00"/>
+            <!-- Sin casco -->
+            <!-- Sin chaleco -->
+            
+            <!-- Trabajador 2 sin EPP -->
+            <circle cx="350" cy="170" r="25" fill="#00FF00"/>
+            <rect x="325" y="195" width="50" height="80" fill="#00FF00"/>
+            <!-- Sin casco -->
+            <!-- Sin chaleco -->
+            
+            <text x="10" y="30" font-family="Arial" font-size="20" fill="black">🚨 Escenario Crítico - Sin EPP</text>
+        </svg>
+        """
 
-def draw_detections_pil(image, draw, detections):
-    """Dibujar detecciones usando PIL"""
-    colors = {
-        'person': 'green',
-        'helmet': 'blue', 
-        'safety_vest': 'red'
-    }
-    
-    for detection in detections:
-        class_name = detection['class_name']
-        x1, y1, x2, y2 = detection['bbox']
-        color = colors.get(class_name, 'black')
-        
-        # Dibujar bounding box
-        draw.rectangle([x1, y1, x2, y2], outline=color, width=3)
-        
-        # Dibujar etiqueta
-        label = f"{class_name}"
-        bbox = draw.textbbox((0, 0), label)
-        text_width = bbox[2] - bbox[0]
-        text_height = bbox[3] - bbox[1]
-        
-        draw.rectangle([x1, y1-text_height-10, x1+text_width+10, y1], fill=color)
-        draw.text((x1+5, y1-text_height-5), label, fill='white')
-    
-    return image
-
+# =============================================
+# FUNCIONES DE SIMULACIÓN
+# =============================================
 def simulate_detections(scenario_type):
     """Simular detecciones de YOLO"""
-    if scenario_type == "escenario_seguro":
+    if scenario_type == "seguro":
         return [
             {'class_name': 'person', 'confidence': 0.95, 'bbox': [100, 100, 180, 250]},
             {'class_name': 'helmet', 'confidence': 0.92, 'bbox': [110, 90, 140, 120]},
@@ -217,7 +238,7 @@ def simulate_detections(scenario_type):
             {'class_name': 'helmet', 'confidence': 0.91, 'bbox': [310, 140, 340, 170]},
             {'class_name': 'safety_vest', 'confidence': 0.87, 'bbox': [300, 170, 380, 220]}
         ]
-    elif scenario_type == "escenario_alerta":
+    elif scenario_type == "alerta":
         return [
             {'class_name': 'person', 'confidence': 0.95, 'bbox': [100, 100, 180, 250]},
             {'class_name': 'helmet', 'confidence': 0.92, 'bbox': [110, 90, 140, 120]},
@@ -226,7 +247,7 @@ def simulate_detections(scenario_type):
             {'class_name': 'safety_vest', 'confidence': 0.87, 'bbox': [300, 170, 380, 220]}
             # Falta casco para segunda persona
         ]
-    else:  # escenario_critico
+    else:  # critico
         return [
             {'class_name': 'person', 'confidence': 0.95, 'bbox': [100, 100, 180, 250]},
             {'class_name': 'person', 'confidence': 0.88, 'bbox': [300, 150, 380, 300]},
@@ -244,14 +265,14 @@ expert_system = SafetyExpertSystem()
 st.sidebar.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
 st.sidebar.header("⚙️ Configuración")
 min_confidence = st.sidebar.slider("Confianza Mínima", 0.1, 0.9, 0.6, 0.05)
-alert_system = st.sidebar.checkbox("Alertas Activas", True)
+alert_system = st.sidebar.checkbox("Sistema de Alertas Activo", True)
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
 st.sidebar.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
 st.sidebar.header("🎯 Modo de Operación")
 mode = st.sidebar.radio(
     "Selecciona el modo:",
-    ["📊 Demo con Escenarios", "📸 Subir Imagen"],
+    ["📊 Demo con Escenarios", "ℹ️ Solo Análisis"],
     index=0
 )
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
@@ -281,49 +302,44 @@ with col1:
         )
         
         scenario_map = {
-            "✅ Condiciones Seguras": "escenario_seguro",
-            "⚠️ Alertas Parciales": "escenario_alerta", 
-            "🚨 Condiciones Críticas": "escenario_critico"
+            "✅ Condiciones Seguras": "seguro",
+            "⚠️ Alertas Parciales": "alerta", 
+            "🚨 Condiciones Críticas": "critico"
         }
         
         selected_scenario = scenario_map[scenario]
         
         if st.button("🚀 Ejecutar Análisis de Seguridad", use_container_width=True):
-            with st.spinner("🖼️ Generando escenario de obra..."):
-                # Crear imagen de demo
-                demo_img, draw_obj = create_demo_image(selected_scenario)
-                time.sleep(1)
-            
             with st.spinner("🔍 Analizando condiciones de seguridad..."):
                 # Simular detecciones
                 detections = simulate_detections(selected_scenario)
                 analysis = expert_system.analyze_detections(detections)
                 time.sleep(1)
-                
-                # Dibujar detecciones en la imagen
-                result_img = draw_detections_pil(demo_img, draw_obj, detections)
             
             st.success("✅ Análisis completado")
             
-            # Mostrar imagen resultante
-            st.image(result_img, caption=f"Escenario: {scenario}", use_column_width=True)
+            # Mostrar imagen del escenario
+            svg_image = get_base64_image(selected_scenario)
+            st.markdown(f'<div class="scenario-image">{svg_image}</div>', unsafe_allow_html=True)
             
             # Mostrar resultados del análisis
             alert_level = analysis['alert_level']
             if alert_level == "ALTA":
                 st.markdown(f"""
                 <div class="alert-high">
-                    <h3>🚨 ALERTA CRÍTICA</h3>
+                    <h3>🚨 ALERTA CRÍTICA DE SEGURIDAD</h3>
                     <p><strong>{analysis['alert_message']}</strong></p>
-                    <p>📋 <strong>Acción:</strong> {analysis['recommended_action']}</p>
+                    <p>📋 <strong>Acción Recomendada:</strong> {analysis['recommended_action']}</p>
+                    <p>⏰ <strong>Prioridad:</strong> Resolución Inmediata</p>
                 </div>
                 """, unsafe_allow_html=True)
             elif alert_level == "MEDIA":
                 st.markdown(f"""
                 <div class="alert-medium">
-                    <h3>⚠️ ALERTA MEDIA</h3>
+                    <h3>⚠️ ALERTA DE SEGURIDAD</h3>
                     <p><strong>{analysis['alert_message']}</strong></p>
-                    <p>📋 <strong>Acción:</strong> {analysis['recommended_action']}</p>
+                    <p>📋 <strong>Acción Recomendada:</strong> {analysis['recommended_action']}</p>
+                    <p>⏰ <strong>Prioridad:</strong> Resolución en 1 hora</p>
                 </div>
                 """, unsafe_allow_html=True)
             else:
@@ -331,7 +347,8 @@ with col1:
                 <div class="alert-ok">
                     <h3>✅ CONDICIONES SEGURAS</h3>
                     <p><strong>{analysis['alert_message']}</strong></p>
-                    <p>📋 <strong>Acción:</strong> {analysis['recommended_action']}</p>
+                    <p>📋 <strong>Acción Recomendada:</strong> {analysis['recommended_action']}</p>
+                    <p>⏰ <strong>Estado:</strong> Operaciones Normales</p>
                 </div>
                 """, unsafe_allow_html=True)
         
@@ -339,42 +356,46 @@ with col1:
             st.info("👆 **Presiona el botón para ejecutar el análisis**")
             
     else:
-        # Modo subir imagen
-        st.info("📸 **Sube una imagen de tu obra**")
-        uploaded_file = st.file_uploader("Selecciona imagen:", type=['jpg', 'jpeg', 'png'])
+        # Modo solo análisis
+        st.info("🔍 **Análisis directo de condiciones**")
         
-        if uploaded_file is not None:
-            image = Image.open(uploaded_file)
-            st.image(image, caption="Imagen subida", use_column_width=True)
+        # Inputs manuales para simular
+        col_a, col_b, col_c = st.columns(3)
+        with col_a:
+            workers = st.number_input("👥 Trabajadores detectados", 0, 10, 2)
+        with col_b:
+            helmets = st.number_input("🪖 Cascos detectados", 0, 10, 2)
+        with col_c:
+            vests = st.number_input("🦺 Chalecos detectados", 0, 10, 2)
+        
+        if st.button("📊 Analizar Condiciones", use_container_width=True):
+            # Crear detecciones simuladas
+            simulated_detections = []
+            for i in range(workers):
+                simulated_detections.append({'class_name': 'person', 'confidence': 0.9, 'bbox': [0,0,0,0]})
+            for i in range(helmets):
+                simulated_detections.append({'class_name': 'helmet', 'confidence': 0.9, 'bbox': [0,0,0,0]})
+            for i in range(vests):
+                simulated_detections.append({'class_name': 'safety_vest', 'confidence': 0.9, 'bbox': [0,0,0,0]})
             
-            # Simular análisis
-            with st.spinner("🔍 Analizando imagen..."):
-                file_name = uploaded_file.name.lower()
-                if "safe" in file_name:
-                    detections = simulate_detections("escenario_seguro")
-                elif "alert" in file_name:
-                    detections = simulate_detections("escenario_alerta")
-                else:
-                    detections = simulate_detections("escenario_critico")
-                
-                analysis = expert_system.analyze_detections(detections)
-                time.sleep(1)
+            analysis = expert_system.analyze_detections(simulated_detections)
             
             # Mostrar resultados
             alert_level = analysis['alert_level']
             if alert_level == "ALTA":
                 st.error(f"🚨 {analysis['alert_message']}")
+                st.warning(f"📋 **Acción:** {analysis['recommended_action']}")
             elif alert_level == "MEDIA":
                 st.warning(f"⚠️ {analysis['alert_message']}")
+                st.info(f"📋 **Acción:** {analysis['recommended_action']}")
             else:
                 st.success(f"✅ {analysis['alert_message']}")
-            
-            st.info(f"📋 **Acción recomendada:** {analysis['recommended_action']}")
+                st.info(f"📋 **Acción:** {analysis['recommended_action']}")
 
 with col2:
     st.subheader("📊 Panel de Control")
     
-    # Mostrar estadísticas
+    # Mostrar estadísticas actuales
     if 'analysis' in locals():
         stats = analysis.get('statistics', {})
         persons = stats.get('persons', 0)
@@ -395,7 +416,7 @@ with col2:
         st.metric("📈 Cumplimiento", f"{compliance:.1f}%")
     st.markdown('</div>', unsafe_allow_html=True)
     
-    # Alertas
+    # Alertas activas
     st.subheader("🚨 Estado Actual")
     if persons > 0:
         if helmets < persons:
@@ -410,53 +431,57 @@ with col2:
     else:
         st.info("👀 No hay trabajadores")
     
-    # Historial
+    # Historial simplificado
     st.subheader("📋 Actividad Reciente")
-    activity_data = {
-        'Hora': [datetime.now().strftime("%H:%M"), '10:30', '09:15'],
-        'Evento': ['Análisis Actual', 'Zona B', 'Revisión'],
-        'Resultado': [analysis['alert_level'] if 'analysis' in locals() else 'N/A', 'MEDIA', 'OK']
-    }
-    df = pd.DataFrame(activity_data)
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.write("• Análisis actual: " + analysis.get('alert_level', 'N/A') if 'analysis' in locals() else "N/A")
+    st.write("• Inspección Zona B: MEDIA")
+    st.write("• Revisión matutina: OK")
 
 # =============================================
-# ESTADÍSTICAS
+# SECCIÓN DE ESTADÍSTICAS
 # =============================================
 st.markdown("---")
 st.subheader("📈 Estadísticas del Sistema")
 
 col3, col4, col5, col6 = st.columns(4)
 with col3:
-    st.metric("Inspecciones Hoy", "24", "12%")
+    st.metric("Inspecciones Hoy", "24")
 with col4:
-    st.metric("Alertas Totales", "8", "-3%")
+    st.metric("Alertas Totales", "8")
 with col5:
-    st.metric("Cumplimiento", "83%", "5%")
+    st.metric("Cumplimiento", "83%")
 with col6:
-    st.metric("Respuesta", "2.1 min", "0.3 min")
+    st.metric("Respuesta Promedio", "2.1 min")
+
+# =============================================
+# INFORMACIÓN DEL SISTEMA
+# =============================================
+st.sidebar.markdown("---")
+st.sidebar.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+st.sidebar.subheader("ℹ️ Información del Sistema")
+st.sidebar.info("""
+**SafeBuild v1.0**  
+
+🚧 **Sistema Integrado de:**  
+• Sistema Experto de Reglas  
+• Análisis de Seguridad Automático  
+• Alertas Inteligentes  
+
+🎓 **Para TP Integrador IA:**  
+• Sistemas Expertos  
+• Automatización Inteligente  
+• Aplicación Práctica
+""")
+st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
 # =============================================
 # FOOTER
 # =============================================
 st.markdown("---")
 st.markdown("""
-<div style="text-align: center; color: #666;">
-    <p><strong>SafeBuild v1.0</strong> - Sistema Inteligente de Monitoreo | 🚧 TP Integrador IA 🚧</p>
+<div style="text-align: center; color: #666; padding: 2rem;">
+    <p><strong>SafeBuild v1.0</strong> - Sistema Inteligente de Monitoreo de Seguridad en Obras</p>
+    <p>🚧 <strong>Trabajo Práctico Integrador</strong> - Desarrollo de Sistemas de Inteligencia Artificial 🚧</p>
+    <p style="font-size: 0.8rem;">Integra: Sistemas Expertos + Automatización Inteligente</p>
 </div>
 """, unsafe_allow_html=True)
-
-# Información en sidebar
-st.sidebar.markdown("---")
-st.sidebar.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-st.sidebar.info("""
-**SafeBuild v1.0**  
-Sistema de monitoreo inteligente  
-para obras de construcción
-
-🚧 **Integra:**  
-• Sistema experto de reglas  
-• Análisis de seguridad  
-• Alertas automáticas
-""")
-st.sidebar.markdown('</div>', unsafe_allow_html=True)
